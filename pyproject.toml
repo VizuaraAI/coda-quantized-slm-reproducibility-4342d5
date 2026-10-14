@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coda"
+version = "0.1.0"
+description = "Cross-Device Output Divergence Audit for quantized small language models"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Naresh Kumar" }]
+dependencies = [
+    "numpy>=1.26",
+    "pyyaml>=6.0",
+    "pandas>=2.2",
+    "matplotlib>=3.8",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+# Needed for the FP32 reference trace from a real checkpoint.
+reference = [
+    "torch>=2.4",
+    "transformers>=4.44",
+    "datasets>=2.20",
+    "accelerate>=0.33",
+]
+# Needed for the quantized GGUF host-side trace.
+quantized = [
+    "llama-cpp-python>=0.3.2",
+]
+dev = [
+    "pytest>=8.2",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+coda-audit = "coda.run_audit:main"
+coda-eval = "coda.evaluate:main"
+coda-plots = "coda.plots:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"

@@ -1,0 +1,19 @@
+# Core harness. These five are all the smoke test needs.
+numpy>=1.26
+pyyaml>=6.0
+pandas>=2.2
+matplotlib>=3.8
+tqdm>=4.66
+
+# Reference trace from a real checkpoint (install when you reach week 2).
+# torch>=2.4
+# transformers>=4.44
+# datasets>=2.20
+# accelerate>=0.33
+
+# Host-side quantized GGUF trace (install when you reach week 2).
+# llama-cpp-python>=0.3.2
+
+# Development.
+pytest>=8.2
+ruff>=0.6

@@ -1,0 +1,100 @@
+# Default audit configuration.
+#
+# As shipped this runs entirely on your laptop: a synthetic model, simulated
+# backends, offline prompts. It exercises every line of the pipeline without
+# a phone or a download, which is what you want while the metrics are still
+# changing under you.
+#
+# Each section below has a comment telling you what to change and when.
+
+model:
+  name: toy-synthetic
+  # Set hf_id and switch a device to the hf_reference backend for the FP32
+  # reference trace, e.g. meta-llama/Llama-3.2-1B-Instruct.
+  hf_id: null
+  # Set gguf_path and switch a device to llamacpp_host for a real quantized
+  # host-side trace.
+  gguf_path: null
+  recipe: int8-per-channel
+  bits: 8
+  # Paste the artifact hash here once you have a real file. Leaving it empty
+  # disables the check, which is fine for the synthetic model (its weights are
+  # hashed in memory) and not fine for anything else.
+  sha256: ""
+
+# Every entry is one column of the results table. `backend` is either a
+# kernel preset (simulated) or a real backend name.
+#
+# Kernel presets : ref, cpu_neon, cpu_i8mm, gpu_opencl, npu_pertensor,
+#                  npu_fp16_accum
+# Real backends  : hf_reference, llamacpp_host, llamacpp_adb
+devices:
+  - name: ref
+    soc: host-fp64
+    backend: ref
+
+  - name: cpu_neon
+    soc: simulated-arm
+    backend: cpu_neon
+
+  - name: cpu_i8mm
+    soc: simulated-arm
+    backend: cpu_i8mm
+
+  - name: gpu_opencl
+    soc: simulated-gpu
+    backend: gpu_opencl
+
+  - name: npu_pertensor
+    soc: simulated-npu
+    backend: npu_pertensor
+
+  # The mitigation arm: identical to npu_pertensor except that scales are
+  # snapped to powers of two, which makes scale application exact.
+  - name: npu_pertensor_pow2
+    soc: simulated-npu
+    backend: npu_pertensor
+    options:
+      pow2_scales: true
+
+  # A real phone. Uncomment once LlamaCppAdbBackend.generate is implemented,
+  # and fill in the serial from `adb devices`.
+  # - name: pixel8_cpu
+  #   soc: tensor-g3
+  #   backend: llamacpp_adb
+  #   adb_serial: "REPLACE_WITH_SERIAL"
+  #   options:
+  #     gguf_path_on_device: /data/local/tmp/coda/model.gguf
+  #     n_threads: 4
+  #     delegate: cpu
+
+dataset:
+  tasks: [gsm8k, arc_easy, mmlu, triviaqa, ifeval]
+  # Raise this once the pipeline is trustworthy. The paper's suite is 2,000
+  # prompts; 8 per task keeps a full pass under a minute while you iterate.
+  n_per_task: 8
+  max_new_tokens: 48
+  offline: true
+  seed: 0
+
+thermal:
+  # On the host there is only one meaningful state. On a phone, run all three.
+  states: [cold]
+  cold_idle_seconds: 0
+  warm_load_seconds: 300
+  throttled_load_seconds: 1200
+  # Turn this on for device runs so a cell that misses its temperature window
+  # raises instead of being recorded with the wrong label.
+  enforce: false
+
+trace:
+  top_k: 8
+  # Teacher forcing isolates the per-step flip rate from autoregressive
+  # amplification. Run the audit both ways and compare.
+  teacher_forced: false
+
+# Within-device repeats. Never drop below 3: this is the control that proves
+# a cross-device difference is not just device-internal noise.
+repeats: 3
+
+output_root: runs
